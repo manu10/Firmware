@@ -73,7 +73,22 @@
 #include "ciaak.h"            /* <= ciaa kernel header */
 #include "blinking.h"         /* <= own header */
 
+
 /*==================[macros and definitions]=================================*/
+#define BYTETOBINARYPATTERN "%d%d%d%d%d%d%d%d"/* <= Macro to convert to binary
+You need all the extra "s unfortunately. This approach has the efficiency risks of macros (don't pass a function as the argument to BYTETOBINARY) but avoids the memory issues and multiple invocations of strcat in some of the other proposals here.
+And has the advantage also to be invocable multiple times in a printf which the ones with static buffers can't.
+Source: http://stackoverflow.com/questions/111928/is-there-a-printf-converter-to-print-in-binary-format*/
+#define BYTETOBINARY(byte)  \
+  (byte & 0x80 ? 1 : 0), \
+  (byte & 0x40 ? 1 : 0), \
+  (byte & 0x20 ? 1 : 0), \
+  (byte & 0x10 ? 1 : 0), \
+  (byte & 0x08 ? 1 : 0), \
+  (byte & 0x04 ? 1 : 0), \
+  (byte & 0x02 ? 1 : 0), \
+  (byte & 0x01 ? 1 : 0) 
+
 
 /*==================[internal data declaration]==============================*/
 
@@ -170,16 +185,30 @@ TASK(InitTask)
  */
 TASK(PeriodicTask)
 {
-   uint8_t outputs;
+   uint8_t outputs, izq;
 
    /* write blinking message */
-   ciaaPOSIX_printf("Blinking\n");
+
+   ciaaPOSIX_printf("Blinking %d\n", izq);
 
    /* blink output */
    ciaaPOSIX_read(fd_out, &outputs, 1);
-   outputs ^= 0x27;
-   ciaaPOSIX_write(fd_out, &outputs, 1);
 
+   if((outputs==0x00)|(outputs==0x20)){
+     outputs = 0x20;
+     izq=~1;
+   }
+   else if (outputs==0x01){
+     izq=1;
+   }
+   outputs=outputs>>((~izq)&0x01);
+   outputs=outputs<<((izq)&0x01);
+
+   /*for debugging*/
+   ciaaPOSIX_printf("Salidas: "BYTETOBINARYPATTERN, BYTETOBINARY(outputs),"");
+   ciaaPOSIX_printf("izq=  %d\n", izq);
+   ciaaPOSIX_write(fd_out, &outputs, 1);
+  
    /* terminate task */
    TerminateTask();
 }
