@@ -177,7 +177,7 @@ TASK(PeriodicTask)
 
    /* blink output */
    ciaaPOSIX_read(fd_out, &outputs, 1);
-   outputs ^= 0x20;
+   outputs ^= 0x27;
    ciaaPOSIX_write(fd_out, &outputs, 1);
 
    /* terminate task */
